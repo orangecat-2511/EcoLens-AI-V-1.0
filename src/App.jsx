@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import jsPDF from "jspdf";
 import pptxgen from "pptxgenjs";
 import * as XLSX from "xlsx";
@@ -66,6 +66,18 @@ import {
 } from "recharts";
 
 import "./App.css";
+
+const API_BASE_URL = "http://127.0.0.1:8000/api";
+
+async function fetchApi(path, options = {}) {
+  const response = await fetch(`${API_BASE_URL}${path}`, options);
+
+  if (!response.ok) {
+    throw new Error(`EcoLens API request failed: ${response.status}`);
+  }
+
+  return response.json();
+}
 
 /* =========================================================
    DATA
@@ -380,7 +392,7 @@ function Sidebar({ activePage, setActivePage, mobileOpen, setMobileOpen }) {
    HEADER
 ========================================================= */
 
-function TopHeader({ title, setMobileOpen }) {
+function TopHeader({ title, setMobileOpen, selectedCountry, setSelectedCountry }) {
   const handleDownloadReport = () => {
   const doc = new jsPDF();
 
@@ -447,23 +459,15 @@ function TopHeader({ title, setMobileOpen }) {
 
   <select
     className="country-selector"
-    defaultValue="India"
+    value={selectedCountry}
+    onChange={(event) => setSelectedCountry(event.target.value)}
   >
     <option value="India">🇮🇳 India</option>
-    <option value="United States">🇺🇸 United States</option>
-    <option value="United Kingdom">🇬🇧 United Kingdom</option>
-    <option value="China">🇨🇳 China</option>
-    <option value="Japan">🇯🇵 Japan</option>
-    <option value="Germany">🇩🇪 Germany</option>
-    <option value="France">🇫🇷 France</option>
-    <option value="Canada">🇨🇦 Canada</option>
-    <option value="Australia">🇦🇺 Australia</option>
-    <option value="Brazil">🇧🇷 Brazil</option>
-    <option value="South Korea">🇰🇷 South Korea</option>
-    <option value="Singapore">🇸🇬 Singapore</option>
-    <option value="United Arab Emirates">🇦🇪 United Arab Emirates</option>
-    <option value="Switzerland">🇨🇭 Switzerland</option>
-    <option value="Netherlands">🇳🇱 Netherlands</option>
+    <option value="Indonesia">🇮🇩 Indonesia</option>
+    <option value="Vietnam">🇻🇳 Vietnam</option>
+    <option value="Philippines">🇵🇭 Philippines</option>
+    <option value="Thailand">🇹🇭 Thailand</option>
+    <option value="Bangladesh">🇧🇩 Bangladesh</option>
   </select>
 </div>
 
@@ -554,7 +558,38 @@ function EmptyState({ icon: Icon = Database, title, text }) {
    DASHBOARD
 ========================================================= */
 
-function Dashboard() {
+function Dashboard({ selectedCountry }) {
+  const [assessment, setAssessment] = useState(null);
+  const [apiError, setApiError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    fetchApi(`/countries/${encodeURIComponent(selectedCountry)}/assessment`)
+      .then((data) => {
+        if (active) setAssessment(data);
+      })
+      .catch(() => {
+        if (active) setApiError("Using demo data. Start the FastAPI server to sync live data.");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedCountry]);
+
+  const dashboardYears = assessment?.history || years;
+  const epiScore = assessment?.epi_score ?? 28.7;
+  const dashboardIndicators = indicatorData.map((item) => {
+    const apiIndicator = assessment?.indicators?.find(
+      (indicator) => indicator.name === item.name
+    );
+
+    return apiIndicator
+      ? { ...item, value: apiIndicator.value, unit: apiIndicator.unit }
+      : item;
+  });
+
   const healthData = [
     { name: "Good", value: 17 },
     { name: "Moderate", value: 33 },
@@ -570,13 +605,16 @@ function Dashboard() {
       />
 
       <div className="updated-row">
-        <span>Last Updated: 20 May 2025</span>
+        <span>
+          Last Updated: {assessment ? "Live API data" : "20 May 2025"}
+        </span>
+        {apiError && <span>{apiError}</span>}
       </div>
 
       <section className="kpi-grid five">
         <KpiCard
           title="EPI Score (2024)"
-          value="28.7"
+          value={epiScore}
           suffix="/100"
           note="Environmental Performance Index"
           type="positive"
@@ -621,7 +659,7 @@ function Dashboard() {
           />
 
           <div className="indicator-list">
-            {indicatorData.map((item) => {
+            {dashboardIndicators.map((item) => {
               const Icon = item.icon;
 
               return (
@@ -660,7 +698,7 @@ function Dashboard() {
   <div className="chart-container">
     <ResponsiveContainer width="100%" height={230}>
       <LineChart
-        data={years}
+        data={dashboardYears}
         margin={{
           top: 10,
           right: 20,
@@ -709,7 +747,7 @@ function Dashboard() {
   <div className="chart-container">
     <ResponsiveContainer width="100%" height={230}>
       <LineChart
-        data={years}
+        data={dashboardYears}
         margin={{
           top: 10,
           right: 20,
@@ -851,7 +889,18 @@ function Dashboard() {
    AI PREDICTION
 ========================================================= */
 
-function Prediction() {
+function Prediction({ selectedCountry }) {
+  const [forecast, setForecast] = useState(null);
+
+  useEffect(() => {
+    fetchApi(`/countries/${encodeURIComponent(selectedCountry)}/forecast`)
+      .then(setForecast)
+      .catch(() => setForecast(null));
+  }, [selectedCountry]);
+
+  const forecastPoints = forecast?.points || forecastData;
+  const predictedScore = forecast?.points?.at(-1)?.predicted ?? 34.6;
+
   return (
     <div className="page">
       <PageTitle
@@ -884,8 +933,8 @@ function Prediction() {
         <Card>
           <div className="prediction-result">
             <span>Predicted EPI Score (2030)</span>
-            <strong>34.6</strong>
-            <small>↑ 5.9 from 2024</small>
+            <strong>{predictedScore}</strong>
+            <small>↑ {(predictedScore - (forecast?.points?.[0]?.historical ?? 28.7)).toFixed(1)} from 2024</small>
           </div>
         </Card>
 
@@ -932,7 +981,7 @@ function Prediction() {
           />
 
           <ResponsiveContainer width="100%" height={320}>
-            <LineChart data={forecastData}>
+            <LineChart data={forecastPoints}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="year" />
               <YAxis domain={[20, 45]} />
@@ -1038,7 +1087,17 @@ function Prediction() {
    EXPLAINABLE AI
 ========================================================= */
 
-function ExplainableAI() {
+function ExplainableAI({ selectedCountry }) {
+  const [explanation, setExplanation] = useState(null);
+
+  useEffect(() => {
+    fetchApi(`/countries/${encodeURIComponent(selectedCountry)}/explainability`)
+      .then(setExplanation)
+      .catch(() => setExplanation(null));
+  }, [selectedCountry]);
+
+  const explanationItems = explanation?.contributions || shapData;
+
   return (
     <div className="page">
       <PageTitle
@@ -1051,7 +1110,7 @@ function ExplainableAI() {
         <Card>
           <div className="explain-score">
             <span>Predicted EPI Score (2030)</span>
-            <strong>34.6</strong>
+            <strong>{explanation?.predicted_score ?? 34.6}</strong>
           </div>
         </Card>
 
@@ -1068,8 +1127,8 @@ function ExplainableAI() {
             <div>
               <strong>What does this mean?</strong>
               <p>
-                The model predicts that India's EPI score in 2030 will be
-                34.6. This prediction is influenced by the factors below.
+                The model predicts that {selectedCountry}'s EPI score in 2030 will be
+                {" "}{explanation?.predicted_score ?? 34.6}. This prediction is influenced by the factors below.
               </p>
             </div>
           </div>
@@ -1105,7 +1164,7 @@ function ExplainableAI() {
           />
 
           <div className="shap-list">
-            {shapData.map((item) => (
+            {explanationItems.map((item) => (
               <div className="shap-row" key={item.name}>
                 <span>{item.name}</span>
 
@@ -1128,7 +1187,7 @@ function ExplainableAI() {
 
           <div className="projected-score">
             <span>Projected EPI Score</span>
-            <strong>34.6</strong>
+            <strong>{explanation?.predicted_score ?? 34.6}</strong>
           </div>
         </Card>
       </div>
@@ -1159,8 +1218,7 @@ function ExplainableAI() {
    TWIN FINDER
 ========================================================= */
 
-function TwinFinder() {
-  const [selectedCountryName, setSelectedCountryName] = useState("India");
+function TwinFinder({ selectedCountryName, setSelectedCountryName }) {
   const [selectedTwinName, setSelectedTwinName] = useState(null);
 
   /* ---------------------------------------------------------
@@ -1989,11 +2047,26 @@ function TwinFinder() {
    POLICY & SCENARIO
 ========================================================= */
 
-function PolicyScenario() {
+function PolicyScenario({ selectedCountry }) {
   const [customScenarioOpen, setCustomScenarioOpen] = useState(false);
   const [selected, setSelected] = useState([]);
   const [hasRun, setHasRun] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
+  const [availableScenarios, setAvailableScenarios] = useState(scenarioData);
+  const [serverResult, setServerResult] = useState(null);
+
+  useEffect(() => {
+    fetchApi("/interventions")
+      .then(({ interventions }) => {
+        setAvailableScenarios(interventions.map((item) => ({
+          ...item,
+          score: `+${item.score_gain}`,
+          impact: `+${item.impact}%`,
+          confidence: item.confidence >= 0.85 ? "High impact" : "Medium impact",
+        })));
+      })
+      .catch(() => setAvailableScenarios(scenarioData));
+  }, []);
 
   /*
     Each intervention has its own environmental impact.
@@ -2073,14 +2146,19 @@ function PolicyScenario() {
     setIsRunning(true);
     setHasRun(false);
 
-    /*
-      Small delay makes the simulation feel like an AI/model
-      execution instead of an instant UI change.
-    */
-    setTimeout(() => {
-      setIsRunning(false);
-      setHasRun(true);
-    }, 900);
+    const selectedInterventions = availableScenarios.filter((item) => selected.includes(item.name));
+    Promise.all(selectedInterventions.map((item) => item.id ? item : null))
+      .then(() => fetchApi(`/countries/${encodeURIComponent(selectedCountry)}/scenarios`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intervention_ids: selectedInterventions.map((item) => item.id).filter(Boolean) }),
+      }))
+      .then((result) => setServerResult(result))
+      .catch(() => setServerResult(null))
+      .finally(() => {
+        setIsRunning(false);
+        setHasRun(true);
+      });
   };
 
   /* ---------------------------------------------------------
@@ -2149,6 +2227,10 @@ function PolicyScenario() {
       indicatorImpactMap,
     };
   }, [selected]);
+
+  const effectiveSimulation = serverResult
+    ? { ...simulation, baselineScore: serverResult.baseline_score, projectedScore: serverResult.projected_score, totalGain: serverResult.score_gain }
+    : simulation;
 
   /* ---------------------------------------------------------
      INDICATOR IMPACT DATA
@@ -2282,7 +2364,7 @@ function PolicyScenario() {
           />
 
           <div className="scenario-list">
-            {scenarioData.map((scenario) => {
+            {availableScenarios.map((scenario) => {
               const isSelected = selected.includes(scenario.name);
 
               return (
@@ -2448,14 +2530,14 @@ function PolicyScenario() {
                   <span>EPI Score (2030)</span>
 
                   <strong>
-                    {simulation.baselineScore.toFixed(1)}
+                    {effectiveSimulation.baselineScore.toFixed(1)}
                     {" → "}
-                    {simulation.projectedScore.toFixed(1)}
+                    {effectiveSimulation.projectedScore.toFixed(1)}
                   </strong>
 
                   <small>
                     +
-                    {simulation.totalGain.toFixed(1)}
+                    {effectiveSimulation.totalGain.toFixed(1)}
                     {" points"}
                   </small>
                 </div>
@@ -2513,7 +2595,7 @@ function PolicyScenario() {
           {selected.length ? (
             <div className="selected-scenario-list">
               {selected.map((item) => {
-                const effect = scenarioEffects[item];
+                const effect = scenarioEffects[item] || { epiGain: availableScenarios.find((scenario) => scenario.name === item)?.score_gain || 0 };
 
                 return (
                   <div
@@ -2606,9 +2688,10 @@ function PolicyScenario() {
    PRIORITY OPTIMIZER
 ========================================================= */
 
-function PriorityOptimizer() {
+function PriorityOptimizer({ selectedCountry }) {
   const [optimizationRun, setOptimizationRun] = useState(0);
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [apiInterventions, setApiInterventions] = useState(null);
 
   const interventionPool = [
     {
@@ -2677,6 +2760,21 @@ function PriorityOptimizer() {
     },
   ];
 
+  useEffect(() => {
+    fetchApi(`/countries/${encodeURIComponent(selectedCountry)}/priorities`)
+      .then(({ priorities }) => setApiInterventions(priorities.map((item) => ({
+        name: item.intervention,
+        gain: item.gain,
+        impact: item.impact,
+        confidence: item.confidence * 100,
+        category: "Environmental Performance",
+        description: "Backend-ranked sustainability intervention.",
+      }))))
+      .catch(() => setApiInterventions(null));
+  }, [selectedCountry]);
+
+  const activeInterventionPool = apiInterventions || interventionPool;
+
   /*
    * Different optimization strategies.
    * Each time Optimize Again is clicked, the AI evaluates
@@ -2718,18 +2816,18 @@ function PriorityOptimizer() {
    */
   const optimizedInterventions = useMemo(() => {
     const maxGain = Math.max(
-      ...interventionPool.map((item) => item.gain)
+      ...activeInterventionPool.map((item) => item.gain)
     );
 
     const maxImpact = Math.max(
-      ...interventionPool.map((item) => item.impact)
+      ...activeInterventionPool.map((item) => item.impact)
     );
 
     const maxConfidence = Math.max(
-      ...interventionPool.map((item) => item.confidence)
+      ...activeInterventionPool.map((item) => item.confidence)
     );
 
-    return interventionPool
+    return activeInterventionPool
       .map((item) => {
         const normalizedGain = item.gain / maxGain;
         const normalizedImpact = item.impact / maxImpact;
@@ -2748,7 +2846,7 @@ function PriorityOptimizer() {
       })
       .sort((a, b) => b.aiScore - a.aiScore)
       .slice(0, 3);
-  }, [optimizationRun]);
+  }, [optimizationRun, activeInterventionPool]);
 
   /*
    * Calculate final results from the selected interventions.
@@ -4056,25 +4154,31 @@ function App() {
   const [activePage, setActivePage] = useState("dashboard");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState("India");
   const renderPage = () => {
     switch (activePage) {
       case "dashboard":
-        return <Dashboard />;
+        return <Dashboard selectedCountry={selectedCountry} />;
 
       case "prediction":
-        return <Prediction />;
+        return <Prediction selectedCountry={selectedCountry} />;
 
       case "explainable":
-        return <ExplainableAI />;
+        return <ExplainableAI selectedCountry={selectedCountry} />;
 
       case "twin":
-        return <TwinFinder />;
+        return (
+          <TwinFinder
+            selectedCountryName={selectedCountry}
+            setSelectedCountryName={setSelectedCountry}
+          />
+        );
 
       case "policy":
-        return <PolicyScenario />;
+        return <PolicyScenario selectedCountry={selectedCountry} />;
 
       case "optimizer":
-        return <PriorityOptimizer />;
+        return <PriorityOptimizer selectedCountry={selectedCountry} />;
 
       case "reports":
         return <Reports />;
@@ -4108,6 +4212,8 @@ function App() {
         <TopHeader
           setMobileOpen={setMobileOpen}
           title={activePage}
+          selectedCountry={selectedCountry}
+          setSelectedCountry={setSelectedCountry}
         />
 
         <div className="content-wrapper">{renderPage()}</div>
