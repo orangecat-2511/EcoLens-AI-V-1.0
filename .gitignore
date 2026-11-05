@@ -1,10 +1,10 @@
-<<<<<<< HEAD
+# Python
 .venv/
 __pycache__/
-*.pyc
+*.py[cod]
 .ipynb_checkpoints/
 .env
-=======
+
 # Logs
 logs
 *.log
@@ -14,13 +14,11 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Node / Frontend
+node_modules/
+dist/
+dist-ssr/
 *.local
-.venv
-__pycache__/
-*.py[cod]
 
 # Editor directories and files
 .vscode/*
@@ -32,4 +30,3 @@ __pycache__/
 *.njsproj
 *.sln
 *.sw?
->>>>>>> 42fa283746ec0b4e6f504d18c7386d44024e88ad

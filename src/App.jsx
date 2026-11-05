@@ -67,7 +67,16 @@ import {
 
 import "./App.css";
 
-const API_BASE_URL = "http://127.0.0.1:8000/api";
+const API_BASE_URL = (() => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envUrl) {
+    return envUrl.replace(/\/+$/, "") + (envUrl.endsWith("/api") ? "" : "/api");
+  }
+  if (typeof window !== "undefined" && window.location.port === "5173") {
+    return "http://127.0.0.1:8000/api";
+  }
+  return "/api";
+})();
 
 async function fetchApi(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, options);
@@ -80,231 +89,22 @@ async function fetchApi(path, options = {}) {
 }
 
 /* =========================================================
-   DATA
+   DYNAMIC HELPERS
 ========================================================= */
 
-const years = [
-  { year: "2016", score: 35.4, rank: 142 },
-  { year: "2017", score: 33.1, rank: 148 },
-  { year: "2018", score: 32.8, rank: 155 },
-  { year: "2019", score: 31.2, rank: 161 },
-  { year: "2020", score: 30.8, rank: 164 },
-  { year: "2021", score: 29.9, rank: 168 },
-  { year: "2022", score: 28.7, rank: 172 },
-  { year: "2023", score: 27.9, rank: 179 },
-  { year: "2024", score: 28.7, rank: 176 },
-];
+const INDICATOR_ICON_MAP = {
+  "Air Quality": Wind,
+  "Water Quality": Droplets,
+  "Forest Cover": Trees,
+  "Renewable Energy": CloudSun,
+  "Waste Management": Trash2,
+  "Biodiversity & Habitat": Trees,
+  "Climate & Energy": CloudSun,
+};
 
-const forecastData = [
-  { year: "2024", historical: 28.7, predicted: null },
-  { year: "2025", historical: null, predicted: 29.4 },
-  { year: "2026", historical: null, predicted: 30.1 },
-  { year: "2027", historical: null, predicted: 31.2 },
-  { year: "2028", historical: null, predicted: 32.3 },
-  { year: "2029", historical: null, predicted: 33.4 },
-  { year: "2030", historical: null, predicted: 34.6 },
-];
-
-const regionalData = [
-  { region: "Europe", score: 64.1 },
-  { region: "North America", score: 51.4 },
-  { region: "Asia", score: 34.2 },
-  { region: "Latin America", score: 32.1 },
-  { region: "Africa", score: 24.7 },
-  { region: "India", score: 28.7 },
-];
-
-const indicatorData = [
-  {
-    name: "Air Quality",
-    value: 45.2,
-    unit: "µg/m³",
-    status: "Poor",
-    icon: Wind,
-  },
-  {
-    name: "Water Quality",
-    value: 42.6,
-    unit: "/100",
-    status: "Poor",
-    icon: Droplets,
-  },
-  {
-    name: "Biodiversity & Habitat",
-    value: 54.1,
-    unit: "/100",
-    status: "Moderate",
-    icon: Trees,
-  },
-  {
-    name: "Forest Cover",
-    value: 24.2,
-    unit: "%",
-    status: "Low",
-    icon: Trees,
-  },
-  {
-    name: "Climate & Energy",
-    value: 30.3,
-    unit: "/100",
-    status: "Moderate",
-    icon: CloudSun,
-  },
-  {
-    name: "Waste Management",
-    value: 38.6,
-    unit: "/100",
-    status: "Poor",
-    icon: Trash2,
-  },
-];
-
-const importanceData = [
-  { name: "Air Quality", value: 17.2 },
-  { name: "Water Quality", value: 16.2 },
-  { name: "Forest Cover", value: 11.4 },
-  { name: "Biodiversity", value: 9.8 },
-  { name: "Waste Management", value: 7.9 },
-  { name: "Renewable Energy", value: 6.3 },
-  { name: "CO₂ Emissions", value: 4.1 },
-  { name: "Others", value: 20.9 },
-];
-
-const shapData = [
-  { name: "Base Value", value: 28.1, positive: false },
-  { name: "Forest Cover", value: 2.8, positive: true },
-  { name: "Renewable Energy", value: 1.9, positive: true },
-  { name: "Waste Management", value: 1.5, positive: true },
-  { name: "Air Quality", value: -2.7, positive: false },
-  { name: "Water Quality", value: -2.1, positive: false },
-  { name: "CO₂ Emissions", value: -1.3, positive: false },
-  { name: "Others", value: -0.6, positive: false },
-];
-
-const twinCountries = [
-  {
-    country: "Indonesia",
-    similarity: 0.91,
-    score: 31.2,
-    air: 32.1,
-    water: 42.1,
-    forest: 50.1,
-    renewable: 19.2,
-  },
-  {
-    country: "Vietnam",
-    similarity: 0.88,
-    score: 34.4,
-    air: 34.5,
-    water: 55.4,
-    forest: 50.1,
-    renewable: 26.6,
-  },
-  {
-    country: "Philippines",
-    similarity: 0.86,
-    score: 31.8,
-    air: 41.2,
-    water: 50.1,
-    forest: 25.9,
-    renewable: 24.4,
-  },
-  {
-    country: "Thailand",
-    similarity: 0.84,
-    score: 38.2,
-    air: 42.1,
-    water: 52.1,
-    forest: 40.8,
-    renewable: 23.7,
-  },
-  {
-    country: "Bangladesh",
-    similarity: 0.82,
-    score: 27.4,
-    air: 29.2,
-    water: 39.1,
-    forest: 14.5,
-    renewable: 4.8,
-  },
-];
-
-const scenarioData = [
-  {
-    name: "Renewable Energy Expansion",
-    description: "Expand solar and wind capacity.",
-    impact: "+10%",
-    score: "+3.8",
-    confidence: "High impact",
-  },
-  {
-    name: "Forest Restoration",
-    description: "Restore degraded forest regions.",
-    impact: "+12%",
-    score: "+4.2",
-    confidence: "High impact",
-  },
-  {
-    name: "Urban Wastewater Modernization",
-    description: "Improve wastewater treatment infrastructure.",
-    impact: "+6%",
-    score: "+2.4",
-    confidence: "Medium impact",
-  },
-  {
-    name: "Clean Air Action Plan",
-    description: "Reduce industrial, vehicle and urban emissions.",
-    impact: "+8%",
-    score: "+3.1",
-    confidence: "High impact",
-  },
-];
-
-const priorityData = [
-  {
-    rank: 1,
-    intervention: "Renewable Energy Expansion",
-    gain: "+6.4",
-    impact: 9.2,
-    confidence: "87%",
-  },
-  {
-    rank: 2,
-    intervention: "Forest Restoration Mission",
-    gain: "+4.8",
-    impact: 8.3,
-    confidence: "85%",
-  },
-  {
-    rank: 3,
-    intervention: "Clean Air Action Plan",
-    gain: "+4.2",
-    impact: 7.9,
-    confidence: "83%",
-  },
-  {
-    rank: 4,
-    intervention: "Urban Wastewater Modernization",
-    gain: "+2.9",
-    impact: 7.5,
-    confidence: "84%",
-  },
-  {
-    rank: 5,
-    intervention: "Sustainable Waste Management",
-    gain: "+3.1",
-    impact: 6.8,
-    confidence: "80%",
-  },
-];
-
-const heatmapData = [
-  ["Air Quality", 42, 55, 61],
-  ["Water Quality", 38, 58, 64],
-  ["Biodiversity", 55, 62, 69],
-  ["Climate & Energy", 45, 51, 60],
-  ["Waste Management", 39, 47, 58],
-];
+function getIndicatorIcon(name) {
+  return INDICATOR_ICON_MAP[name] || Trees;
+}
 
 /* =========================================================
    SIDEBAR
@@ -355,9 +155,8 @@ function Sidebar({ activePage, setActivePage, mobileOpen, setMobileOpen }) {
             return (
               <button
                 key={item.id}
-                className={`nav-item ${
-                  activePage === item.id ? "active" : ""
-                }`}
+                className={`nav-item ${activePage === item.id ? "active" : ""
+                  }`}
                 onClick={() => {
                   setActivePage(item.id);
                   setMobileOpen(false);
@@ -370,19 +169,19 @@ function Sidebar({ activePage, setActivePage, mobileOpen, setMobileOpen }) {
           })}
         </nav>
 
-       <div className="sidebar-bottom">
-  <button
-    className="nav-item"
-    onClick={() => setActivePage("settings")}
-  >
-    <Settings size={17} />
-    <span>Settings</span>
-  </button>
+        <div className="sidebar-bottom">
+          <button
+            className="nav-item"
+            onClick={() => setActivePage("settings")}
+          >
+            <Settings size={17} />
+            <span>Settings</span>
+          </button>
 
-  <div className="sidebar-version">
-    EcoLens AI v1.0
-  </div>
-</div>
+          <div className="sidebar-version">
+            EcoLens AI v1.0
+          </div>
+        </div>
       </aside>
     </>
   );
@@ -392,94 +191,97 @@ function Sidebar({ activePage, setActivePage, mobileOpen, setMobileOpen }) {
    HEADER
 ========================================================= */
 
-function TopHeader({ title, setMobileOpen, selectedCountry, setSelectedCountry }) {
+function TopHeader({ title, setMobileOpen, selectedCountry, setSelectedCountry, countries = [] }) {
   const handleDownloadReport = () => {
-  const doc = new jsPDF();
+    const doc = new jsPDF();
 
-  doc.setFontSize(22);
-  doc.setFont("helvetica", "bold");
-  doc.text("EcoLens AI", 20, 25);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("EcoLens AI", 20, 25);
 
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "normal");
-  doc.text("Environmental Performance Report", 20, 35);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "normal");
+    doc.text("Environmental Performance Report", 20, 35);
 
-  doc.setFontSize(11);
-  doc.text(
-    `Generated on: ${new Date().toLocaleDateString("en-IN")}`,
-    20,
-    45
-  );
+    doc.setFontSize(11);
+    doc.text(
+      `Generated on: ${new Date().toLocaleDateString("en-IN")}`,
+      20,
+      45
+    );
 
-  doc.line(20, 50, 190, 50);
+    doc.line(20, 50, 190, 50);
 
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text("Executive Summary", 20, 65);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Executive Summary", 20, 65);
 
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
 
-  const text =
-    "EcoLens AI analyzes environmental performance data, " +
-    "compares countries and provides environmental insights " +
-    "to support sustainable decision making.";
+    const text =
+      "EcoLens AI analyzes environmental performance data, " +
+      "compares countries and provides environmental insights " +
+      "to support sustainable decision making.";
 
-  doc.text(doc.splitTextToSize(text, 170), 20, 75);
+    doc.text(doc.splitTextToSize(text, 170), 20, 75);
 
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text("Key Features", 20, 105);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Key Features", 20, 105);
 
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
 
-  doc.text("• Environmental Performance Analysis", 25, 115);
-  doc.text("• Country Comparison", 25, 123);
-  doc.text("• Data Explorer", 25, 131);
-  doc.text("• Benchmark Analysis", 25, 139);
-  doc.text("• Explainable AI Insights", 25, 147);
-  doc.text("• Environmental Indicators", 25, 155);
+    doc.text("• Environmental Performance Analysis", 25, 115);
+    doc.text("• Country Comparison", 25, 123);
+    doc.text("• Data Explorer", 25, 131);
+    doc.text("• Benchmark Analysis", 25, 139);
+    doc.text("• Explainable AI Insights", 25, 147);
+    doc.text("• Environmental Indicators", 25, 155);
 
-  doc.setFontSize(9);
-  doc.text(
-    "Generated by EcoLens AI - Environmental Intelligence Platform",
-    20,
-    285
-  );
+    doc.setFontSize(9);
+    doc.text(
+      "Generated by EcoLens AI - Environmental Intelligence Platform",
+      20,
+      285
+    );
 
-  doc.save("EcoLens_AI_Report.pdf");
-};
+    doc.save("EcoLens_AI_Report.pdf");
+  };
   return (
     <header className="top-header">
       <div className="header-left">
-  <button className="mobile-menu" onClick={() => setMobileOpen(true)}>
-    <Menu size={22} />
-  </button>
+        <button className="mobile-menu" onClick={() => setMobileOpen(true)}>
+          <Menu size={22} />
+        </button>
 
-  <select
-    className="country-selector"
-    value={selectedCountry}
-    onChange={(event) => setSelectedCountry(event.target.value)}
-  >
-    <option value="India">🇮🇳 India</option>
-    <option value="Indonesia">🇮🇩 Indonesia</option>
-    <option value="Vietnam">🇻🇳 Vietnam</option>
-    <option value="Philippines">🇵🇭 Philippines</option>
-    <option value="Thailand">🇹🇭 Thailand</option>
-    <option value="Bangladesh">🇧🇩 Bangladesh</option>
-  </select>
-</div>
+        <select
+          className="country-selector"
+          value={selectedCountry}
+          onChange={(event) => setSelectedCountry(event.target.value)}
+        >
+          {countries && countries.length > 0 ? (
+            countries.map((c) => (
+              <option key={c.country} value={c.country}>
+                {c.flag ? `[${c.flag}] ` : ""}{c.country} ({c.score})
+              </option>
+            ))
+          ) : (
+            <option value={selectedCountry}>{selectedCountry}</option>
+          )}
+        </select>
+      </div>
 
-     <div className="header-actions">
-  <button
-    className="header-button"
-    onClick={handleDownloadReport}
-  >
-    <Download size={15} />
-    Download Report
-  </button>
-</div>
+      <div className="header-actions">
+        <button
+          className="header-button"
+          onClick={handleDownloadReport}
+        >
+          <Download size={15} />
+          Download Report
+        </button>
+      </div>
     </header>
   );
 }
@@ -567,10 +369,13 @@ function Dashboard({ selectedCountry }) {
 
     fetchApi(`/countries/${encodeURIComponent(selectedCountry)}/assessment`)
       .then((data) => {
-        if (active) setAssessment(data);
+        if (active) {
+          setAssessment(data);
+          setApiError("");
+        }
       })
       .catch(() => {
-        if (active) setApiError("Using demo data. Start the FastAPI server to sync live data.");
+        if (active) setApiError("Failed to sync live data from API.");
       });
 
     return () => {
@@ -578,22 +383,23 @@ function Dashboard({ selectedCountry }) {
     };
   }, [selectedCountry]);
 
-  const dashboardYears = assessment?.history || years;
-  const epiScore = assessment?.epi_score ?? 28.7;
-  const dashboardIndicators = indicatorData.map((item) => {
-    const apiIndicator = assessment?.indicators?.find(
-      (indicator) => indicator.name === item.name
-    );
+  const dashboardYears = assessment?.history || [];
+  const epiScore = assessment?.epi_score ?? "--";
+  const globalRank = assessment?.rank ?? "--";
+  const totalCountries = assessment?.total_countries ?? 177;
+  const dashboardIndicators = (assessment?.indicators || []).map((item) => ({
+    ...item,
+    icon: getIndicatorIcon(item.name),
+  }));
 
-    return apiIndicator
-      ? { ...item, value: apiIndicator.value, unit: apiIndicator.unit }
-      : item;
-  });
+  const trendDiff = assessment?.history && assessment.history.length > 1
+    ? (Number(assessment.history.at(-1).score) - Number(assessment.history[0].score)).toFixed(1)
+    : "0.0";
 
-  const healthData = [
-    { name: "Good", value: 17 },
-    { name: "Moderate", value: 33 },
-    { name: "Poor", value: 50 },
+  const healthData = assessment?.health_distribution || [
+    { name: "Good", value: 1 },
+    { name: "Moderate", value: 2 },
+    { name: "Poor", value: 2 },
   ];
 
   return (
@@ -606,9 +412,9 @@ function Dashboard({ selectedCountry }) {
 
       <div className="updated-row">
         <span>
-          Last Updated: {assessment ? "Live API data" : "20 May 2025"}
+          Last Updated: {assessment ? "Live Cleaned Dataset API" : "Connecting..."}
         </span>
-        {apiError && <span>{apiError}</span>}
+        {apiError && <span style={{ color: "var(--danger)" }}>{apiError}</span>}
       </div>
 
       <section className="kpi-grid five">
@@ -622,31 +428,31 @@ function Dashboard({ selectedCountry }) {
 
         <KpiCard
           title="Global Rank"
-          value="176"
-          suffix="/180"
-          note="4 positions from bottom"
+          value={globalRank}
+          suffix={`/${totalCountries}`}
+          note={globalRank !== "--" ? (globalRank <= 40 ? "Top tier performance" : globalRank <= 110 ? "Mid-range rank" : "Priority intervention needed") : ""}
           type="positive"
         />
 
         <KpiCard
-          title="Trend (vs 2022)"
-          value="Poor"
-          note="Score declining"
-          type="danger"
+          title="8-Yr Trajectory"
+          value={Number(trendDiff) >= 0 ? `+${trendDiff}` : `${trendDiff}`}
+          note={Number(trendDiff) >= 0 ? "Score improving over 8 years" : "Score declining over 8 years"}
+          type={Number(trendDiff) >= 0 ? "positive" : "danger"}
         />
 
         <KpiCard
-          title="Regional Rank"
-          value="28"
-          suffix="/31"
-          note="Asia ranking"
+          title="Tracked Indicators"
+          value={dashboardIndicators.length || "5"}
+          suffix="key areas"
+          note="Cleaned EPI indicators"
           type="positive"
         />
 
         <KpiCard
-          title="Data Coverage"
-          value="95%"
-          note="19 / 20 indicators"
+          title="Data Integrity"
+          value="100%"
+          note="Live from epilens_clean dataset"
           type="positive"
         />
       </section>
@@ -680,8 +486,10 @@ function Dashboard({ selectedCountry }) {
                       item.status === "Poor"
                         ? "poor"
                         : item.status === "Low"
-                        ? "low"
-                        : "moderate"
+                          ? "low"
+                          : item.status === "Good"
+                            ? "good"
+                            : "moderate"
                     }
                   >
                     {item.status}
@@ -692,122 +500,122 @@ function Dashboard({ selectedCountry }) {
           </div>
         </Card>
 
-       <Card>
-  <CardHeader title="EPI Score Trend" subtitle="2016 – 2024" />
+        <Card>
+          <CardHeader title="EPI Score Trend" subtitle="2016 – 2024" />
 
-  <div className="chart-container">
-    <ResponsiveContainer width="100%" height={230}>
-      <LineChart
-        data={dashboardYears}
-        margin={{
-          top: 10,
-          right: 20,
-          left: 5,
-          bottom: 20,
-        }}
-      >
-        <CartesianGrid
-          vertical={false}
-          strokeDasharray="3 3"
-        />
+          <div className="chart-container">
+            <ResponsiveContainer width="100%" height={230}>
+              <LineChart
+                data={dashboardYears}
+                margin={{
+                  top: 10,
+                  right: 20,
+                  left: 5,
+                  bottom: 20,
+                }}
+              >
+                <CartesianGrid
+                  vertical={false}
+                  strokeDasharray="3 3"
+                />
 
-        <XAxis
-          dataKey="year"
-          fontSize={11}
-          tickMargin={10}
-          interval={0}
-          padding={{ left: 10, right: 10 }}
-        />
+                <XAxis
+                  dataKey="year"
+                  fontSize={11}
+                  tickMargin={10}
+                  interval={0}
+                  padding={{ left: 10, right: 10 }}
+                />
 
-        <YAxis
-          domain={[20, 40]}
-          fontSize={11}
-          tickMargin={8}
-          width={35}
-        />
+                <YAxis
+                  domain={["auto", "auto"]}
+                  fontSize={11}
+                  tickMargin={8}
+                  width={35}
+                />
 
-        <Tooltip />
+                <Tooltip />
 
-        <Line
-          type="monotone"
-          dataKey="score"
-          stroke="#087c3e"
-          strokeWidth={2.5}
-          dot={{ r: 3 }}
-          activeDot={{ r: 5 }}
-        />
-      </LineChart>
-    </ResponsiveContainer>
-  </div>
-</Card>
+                <Line
+                  type="monotone"
+                  dataKey="score"
+                  stroke="#087c3e"
+                  strokeWidth={2.5}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
 
         <Card>
-  <CardHeader title="Global Rank Trend" subtitle="2016 – 2024" />
+          <CardHeader title="Global Rank Trend" subtitle="2016 – 2024" />
 
-  <div className="chart-container">
-    <ResponsiveContainer width="100%" height={230}>
-      <LineChart
-        data={dashboardYears}
-        margin={{
-          top: 10,
-          right: 20,
-          left: 5,
-          bottom: 20,
-        }}
-      >
-        <CartesianGrid
-          vertical={false}
-          strokeDasharray="3 3"
-        />
+          <div className="chart-container">
+            <ResponsiveContainer width="100%" height={230}>
+              <LineChart
+                data={dashboardYears}
+                margin={{
+                  top: 10,
+                  right: 20,
+                  left: 5,
+                  bottom: 20,
+                }}
+              >
+                <CartesianGrid
+                  vertical={false}
+                  strokeDasharray="3 3"
+                />
 
-        <XAxis
-          dataKey="year"
-          fontSize={11}
-          tickMargin={10}
-          interval={0}
-          padding={{ left: 10, right: 10 }}
-        />
+                <XAxis
+                  dataKey="year"
+                  fontSize={11}
+                  tickMargin={10}
+                  interval={0}
+                  padding={{ left: 10, right: 10 }}
+                />
 
-        <YAxis
-          reversed
-          domain={[120, 190]}
-          fontSize={11}
-          tickMargin={8}
-          width={35}
-        />
+                <YAxis
+                  reversed
+                  domain={[1, totalCountries]}
+                  fontSize={11}
+                  tickMargin={8}
+                  width={35}
+                />
 
-        <Tooltip />
+                <Tooltip />
 
-        <Line
-          type="monotone"
-          dataKey="rank"
-          stroke="#263b50"
-          strokeWidth={2.5}
-          dot={{ r: 3 }}
-          activeDot={{ r: 5 }}
-        />
-      </LineChart>
-    </ResponsiveContainer>
-  </div>
-</Card>
+                <Line
+                  type="monotone"
+                  dataKey="rank"
+                  stroke="#263b50"
+                  strokeWidth={2.5}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
       </div>
 
       <div className="three-column-grid">
         <Card>
-          <CardHeader title="EPI Score by Region (2024)" />
+          <CardHeader title="EPI Benchmarks (2024)" subtitle="Comparison with leaders and tiers" />
 
           <ResponsiveContainer width="100%" height={245}>
             <BarChart
-              data={regionalData}
+              data={assessment?.regional_benchmarks || []}
               layout="vertical"
               margin={{ left: 10, right: 10 }}
             >
               <CartesianGrid horizontal={false} />
-              <XAxis type="number" fontSize={10} />
+              <XAxis type="number" fontSize={10} domain={[0, 100]} />
               <YAxis
                 type="category"
                 dataKey="region"
-                width={82}
+                width={100}
                 fontSize={9}
               />
               <Tooltip />
@@ -819,31 +627,31 @@ function Dashboard({ selectedCountry }) {
         <Card>
           <CardHeader
             title="Indicator Heatmap"
-            subtitle="Global comparison"
+            subtitle="Benchmark comparison"
           />
 
           <div className="heatmap">
             <div className="heatmap-head">
               <span></span>
-              <span>India</span>
-              <span>Regional Avg</span>
+              <span>{selectedCountry}</span>
+              <span>Peer Avg</span>
               <span>Global Avg</span>
             </div>
 
-            {heatmapData.map((row) => (
+            {(assessment?.heatmap || []).map((row) => (
               <div className="heatmap-row" key={row[0]}>
                 <strong>{row[0]}</strong>
 
-                <span className="heat low">{row[1]}</span>
-                <span className="heat medium">{row[2]}</span>
-                <span className="heat high">{row[3]}</span>
+                <span className={`heat ${row[1] >= 60 ? "high" : row[1] >= 35 ? "medium" : "low"}`}>{row[1]}</span>
+                <span className={`heat ${row[2] >= 60 ? "high" : row[2] >= 35 ? "medium" : "low"}`}>{row[2]}</span>
+                <span className={`heat ${row[3] >= 60 ? "high" : row[3] >= 35 ? "medium" : "low"}`}>{row[3]}</span>
               </div>
             ))}
           </div>
         </Card>
 
         <Card>
-          <CardHeader title="Environmental Health Overview" />
+          <CardHeader title="Environmental Health Overview" subtitle="Indicator performance breakdown" />
 
           <div className="donut-wrapper">
             <ResponsiveContainer width="100%" height={190}>
@@ -859,24 +667,25 @@ function Dashboard({ selectedCountry }) {
                   <Cell fill="#d0a52c" />
                   <Cell fill="#d95050" />
                 </Pie>
+                <Tooltip />
               </PieChart>
             </ResponsiveContainer>
 
             <div className="donut-center">
-              <strong>50%</strong>
-              <span>Poor</span>
+              <strong>{epiScore}</strong>
+              <span>EPI Score</span>
             </div>
           </div>
 
           <div className="legend-list">
             <span>
-              <i className="dot green"></i> Good <b>17%</b>
+              <i className="dot green"></i> Good <b>{healthData.find((h) => h.name.startsWith("Good"))?.value || 0}</b>
             </span>
             <span>
-              <i className="dot yellow"></i> Moderate <b>33%</b>
+              <i className="dot yellow"></i> Moderate <b>{healthData.find((h) => h.name.startsWith("Moderate"))?.value || 0}</b>
             </span>
             <span>
-              <i className="dot red"></i> Poor <b>50%</b>
+              <i className="dot red"></i> Poor <b>{healthData.find((h) => h.name.startsWith("Poor"))?.value || 0}</b>
             </span>
           </div>
         </Card>
@@ -898,8 +707,13 @@ function Prediction({ selectedCountry }) {
       .catch(() => setForecast(null));
   }, [selectedCountry]);
 
-  const forecastPoints = forecast?.points || forecastData;
-  const predictedScore = forecast?.points?.at(-1)?.predicted ?? 34.6;
+  const forecastPoints = forecast?.points || [];
+  const predictedScore = forecast?.predicted_score ?? "--";
+  const baseScore = forecast?.base_score ?? "--";
+  const predictedRank = forecast?.predicted_rank ?? "--";
+  const rankImprovement = forecast?.rank_improvement ?? 0;
+  const confidence = forecast?.confidence ?? 85;
+  const indicatorForecasts = forecast?.indicator_forecasts || [];
 
   return (
     <div className="page">
@@ -914,8 +728,6 @@ function Prediction({ selectedCountry }) {
           Base Year
           <select>
             <option>2024</option>
-            <option>2023</option>
-            <option>2022</option>
           </select>
         </label>
 
@@ -923,8 +735,6 @@ function Prediction({ selectedCountry }) {
           Prediction Year
           <select>
             <option>2030</option>
-            <option>2029</option>
-            <option>2028</option>
           </select>
         </label>
       </div>
@@ -934,15 +744,15 @@ function Prediction({ selectedCountry }) {
           <div className="prediction-result">
             <span>Predicted EPI Score (2030)</span>
             <strong>{predictedScore}</strong>
-            <small>↑ {(predictedScore - (forecast?.points?.[0]?.historical ?? 28.7)).toFixed(1)} from 2024</small>
+            <small>↑ {baseScore !== "--" && predictedScore !== "--" ? (Number(predictedScore) - Number(baseScore)).toFixed(1) : "0.0"} from 2024</small>
           </div>
         </Card>
 
         <Card>
           <div className="prediction-result">
             <span>Global Rank (2030)</span>
-            <strong>162</strong>
-            <small>↑ 14 ranks</small>
+            <strong>{predictedRank}</strong>
+            <small>↑ {rankImprovement} ranks projected</small>
           </div>
         </Card>
 
@@ -966,8 +776,8 @@ function Prediction({ selectedCountry }) {
             </svg>
 
             <div>
-              <strong>87%</strong>
-              <span>High</span>
+              <strong>{confidence}%</strong>
+              <span>{confidence >= 80 ? "High" : "Moderate"}</span>
             </div>
           </div>
         </Card>
@@ -984,7 +794,7 @@ function Prediction({ selectedCountry }) {
             <LineChart data={forecastPoints}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="year" />
-              <YAxis domain={[20, 45]} />
+              <YAxis domain={["auto", "auto"]} />
               <Tooltip />
               <Legend />
 
@@ -1015,24 +825,17 @@ function Prediction({ selectedCountry }) {
           />
 
           <div className="forecast-list">
-            {[
-              ["Air Quality (PM2.5)", "40.1", "Moderate"],
-              ["Water Quality", "48.3", "Moderate"],
-              ["Biodiversity & Habitat", "59.7", "Moderate"],
-              ["Forest Cover", "26.0", "Low"],
-              ["Climate & Energy", "37.9", "Moderate"],
-              ["Waste Management", "45.2", "Moderate"],
-            ].map(([name, value, status]) => (
-              <div className="forecast-row" key={name}>
-                <span>{name}</span>
+            {indicatorForecasts.map((item) => (
+              <div className="forecast-row" key={item.name}>
+                <span>{item.name}</span>
 
                 <div className="forecast-bar">
-                  <div style={{ width: `${Math.min(value * 1.7, 100)}%` }} />
+                  <div style={{ width: `${Math.min(item.predicted, 100)}%` }} />
                 </div>
 
-                <strong>{value}</strong>
-                <StatusBadge type={status === "Low" ? "low" : "moderate"}>
-                  {status}
+                <strong>{item.predicted}</strong>
+                <StatusBadge type={item.status === "Low" ? "low" : item.status === "Good" ? "good" : "moderate"}>
+                  {item.status}
                 </StatusBadge>
               </div>
             ))}
@@ -1096,7 +899,10 @@ function ExplainableAI({ selectedCountry }) {
       .catch(() => setExplanation(null));
   }, [selectedCountry]);
 
-  const explanationItems = explanation?.contributions || shapData;
+  const explanationItems = explanation?.contributions || [];
+  const importanceItems = explanation?.feature_importance || [];
+  const predictedScore = explanation?.predicted_score ?? "--";
+  const confidence = explanation?.confidence ?? 85;
 
   return (
     <div className="page">
@@ -1110,14 +916,14 @@ function ExplainableAI({ selectedCountry }) {
         <Card>
           <div className="explain-score">
             <span>Predicted EPI Score (2030)</span>
-            <strong>{explanation?.predicted_score ?? 34.6}</strong>
+            <strong>{predictedScore}</strong>
           </div>
         </Card>
 
         <Card>
           <div className="explain-score">
             <span>Model Confidence</span>
-            <strong>87%</strong>
+            <strong>{confidence}%</strong>
           </div>
         </Card>
 
@@ -1127,8 +933,8 @@ function ExplainableAI({ selectedCountry }) {
             <div>
               <strong>What does this mean?</strong>
               <p>
-                The model predicts that {selectedCountry}'s EPI score in 2030 will be
-                {" "}{explanation?.predicted_score ?? 34.6}. This prediction is influenced by the factors below.
+                The model projects that {selectedCountry}'s EPI score will reach
+                {" "}{predictedScore}. This projection is influenced by the positive and negative factor contributions relative to global benchmarks.
               </p>
             </div>
           </div>
@@ -1139,18 +945,18 @@ function ExplainableAI({ selectedCountry }) {
         <Card>
           <CardHeader
             title="Feature Importance (Global)"
-            subtitle="How much each indicator contributes"
+            subtitle="Relative contribution weight across indicators"
           />
 
           <ResponsiveContainer width="100%" height={390}>
             <BarChart
-              data={importanceData}
+              data={importanceItems}
               layout="vertical"
               margin={{ left: 10, right: 20 }}
             >
               <CartesianGrid horizontal={false} />
               <XAxis type="number" />
-              <YAxis dataKey="name" type="category" width={115} fontSize={10} />
+              <YAxis dataKey="name" type="category" width={130} fontSize={10} />
               <Tooltip />
               <Bar dataKey="value" fill="#3b8f63" radius={[0, 4, 4, 0]} />
             </BarChart>
@@ -1159,8 +965,8 @@ function ExplainableAI({ selectedCountry }) {
 
         <Card>
           <CardHeader
-            title="SHAP Explanation (This Prediction)"
-            subtitle="Positive and negative contribution"
+            title="SHAP / Indicator Impact (This Prediction)"
+            subtitle="Positive and negative contribution to score"
           />
 
           <div className="shap-list">
@@ -1187,7 +993,7 @@ function ExplainableAI({ selectedCountry }) {
 
           <div className="projected-score">
             <span>Projected EPI Score</span>
-            <strong>{explanation?.predicted_score ?? 34.6}</strong>
+            <strong>{predictedScore}</strong>
           </div>
         </Card>
       </div>
@@ -1218,104 +1024,20 @@ function ExplainableAI({ selectedCountry }) {
    TWIN FINDER
 ========================================================= */
 
-function TwinFinder({ selectedCountryName, setSelectedCountryName }) {
+function TwinFinder({ selectedCountryName, setSelectedCountryName, allCountries = [] }) {
   const [selectedTwinName, setSelectedTwinName] = useState(null);
+  const [loadedCountries, setLoadedCountries] = useState(allCountries);
 
-  /* ---------------------------------------------------------
-     COUNTRY DATA
-  --------------------------------------------------------- */
+  useEffect(() => {
+    if (!loadedCountries.length) {
+      fetchApi("/countries")
+        .then((data) => setLoadedCountries(data.countries || []))
+        .catch(() => { });
+    }
+  }, [loadedCountries.length]);
 
-  const countryData = [
-    {
-      country: "India",
-      flag: "🇮🇳",
-      score: 28.7,
-      air: 45.2,
-      water: 42.6,
-      forest: 24.2,
-      renewable: 19.1,
-      waste: 38.6,
-      economic: 42,
-      demographic: 52,
-      governance: 47,
-      social: 53,
-      environmental: 32,
-    },
-    {
-      country: "Indonesia",
-      flag: "🇮🇩",
-      score: 31.2,
-      air: 32.1,
-      water: 42.1,
-      forest: 50.1,
-      renewable: 19.2,
-      waste: 52.3,
-      economic: 44,
-      demographic: 55,
-      governance: 49,
-      social: 51,
-      environmental: 45,
-    },
-    {
-      country: "Vietnam",
-      flag: "🇻🇳",
-      score: 34.4,
-      air: 34.5,
-      water: 55.4,
-      forest: 50.1,
-      renewable: 26.6,
-      waste: 55.8,
-      economic: 46,
-      demographic: 57,
-      governance: 54,
-      social: 55,
-      environmental: 52,
-    },
-    {
-      country: "Philippines",
-      flag: "🇵🇭",
-      score: 31.8,
-      air: 41.2,
-      water: 50.1,
-      forest: 25.9,
-      renewable: 24.4,
-      waste: 46.2,
-      economic: 43,
-      demographic: 58,
-      governance: 46,
-      social: 54,
-      environmental: 39,
-    },
-    {
-      country: "Thailand",
-      flag: "🇹🇭",
-      score: 38.2,
-      air: 42.1,
-      water: 52.1,
-      forest: 40.8,
-      renewable: 23.7,
-      waste: 52.8,
-      economic: 50,
-      demographic: 48,
-      governance: 57,
-      social: 59,
-      environmental: 50,
-    },
-    {
-      country: "Bangladesh",
-      flag: "🇧🇩",
-      score: 27.4,
-      air: 29.2,
-      water: 39.1,
-      forest: 14.5,
-      renewable: 4.8,
-      waste: 31.7,
-      economic: 38,
-      demographic: 61,
-      governance: 42,
-      social: 49,
-      environmental: 28,
-    },
+  const countryData = loadedCountries.length > 0 ? loadedCountries : [
+    { country: selectedCountryName, flag: "ISO", score: 30.0, air: 30, water: 30, forest: 30, renewable: 30, waste: 30, economic: 30, demographic: 30, governance: 30, social: 30, environmental: 30 }
   ];
 
   /* ---------------------------------------------------------
@@ -1543,17 +1265,18 @@ function TwinFinder({ selectedCountryName, setSelectedCountryName }) {
      TREND DATA
   --------------------------------------------------------- */
 
-  const trendData = years.map((item, index) => {
+  const trendYears = ["2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024"];
+  const trendData = trendYears.map((yearStr, index) => {
     const selectedTrend =
       selectedCountry.score -
       (8 - index) * 0.7;
 
     const twinTrend =
-      selectedTwin.score -
+      (selectedTwin?.score || selectedCountry.score) -
       (8 - index) * 0.45;
 
     return {
-      year: item.year,
+      year: yearStr,
       selected: Number(selectedTrend.toFixed(1)),
       twin: Number(twinTrend.toFixed(1)),
     };
@@ -1675,11 +1398,10 @@ function TwinFinder({ selectedCountryName, setSelectedCountryName }) {
             {twinCountries.slice(0, 5).map((country, index) => (
 
               <button
-                className={`twin-item ${
-                  selectedTwin?.country === country.country
+                className={`twin-item ${selectedTwin?.country === country.country
                     ? "selected"
                     : ""
-                }`}
+                  }`}
                 key={country.country}
                 onClick={() =>
                   setSelectedTwinName(country.country)
@@ -1919,15 +1641,15 @@ function TwinFinder({ selectedCountryName, setSelectedCountryName }) {
                       difference > 0
                         ? "better"
                         : difference < 0
-                        ? "worse"
-                        : ""
+                          ? "worse"
+                          : ""
                     }
                   >
                     {difference > 0
                       ? `+${difference.toFixed(1)}`
                       : difference < 0
-                      ? difference.toFixed(1)
-                      : "Same"}
+                        ? difference.toFixed(1)
+                        : "Same"}
                   </span>
 
                 </div>
@@ -2052,20 +1774,20 @@ function PolicyScenario({ selectedCountry }) {
   const [selected, setSelected] = useState([]);
   const [hasRun, setHasRun] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
-  const [availableScenarios, setAvailableScenarios] = useState(scenarioData);
+  const [availableScenarios, setAvailableScenarios] = useState([]);
   const [serverResult, setServerResult] = useState(null);
 
   useEffect(() => {
     fetchApi("/interventions")
       .then(({ interventions }) => {
-        setAvailableScenarios(interventions.map((item) => ({
+        setAvailableScenarios((interventions || []).map((item) => ({
           ...item,
           score: `+${item.score_gain}`,
           impact: `+${item.impact}%`,
           confidence: item.confidence >= 0.85 ? "High impact" : "Medium impact",
         })));
       })
-      .catch(() => setAvailableScenarios(scenarioData));
+      .catch(() => setAvailableScenarios([]));
   }, []);
 
   /*
@@ -2275,9 +1997,8 @@ function PolicyScenario({ selectedCountry }) {
           <span className="scenario-selection-info">
             {selected.length === 0
               ? "Select interventions to build your scenario"
-              : `${selected.length} intervention${
-                  selected.length > 1 ? "s" : ""
-                } selected`}
+              : `${selected.length} intervention${selected.length > 1 ? "s" : ""
+              } selected`}
           </span>
         </div>
 
@@ -2293,57 +2014,57 @@ function PolicyScenario({ selectedCountry }) {
             </button>
           )}
 
- {customScenarioOpen && (
-  <div className="custom-scenario-panel">
-    <div className="custom-scenario-header">
-      <h3>Create Custom Scenario</h3>
+          {customScenarioOpen && (
+            <div className="custom-scenario-panel">
+              <div className="custom-scenario-header">
+                <h3>Create Custom Scenario</h3>
 
-      <button
-        type="button"
-        className="custom-scenario-close"
-        onClick={() => setCustomScenarioOpen(false)}
-      >
-        ×
-      </button>
-    </div>
+                <button
+                  type="button"
+                  className="custom-scenario-close"
+                  onClick={() => setCustomScenarioOpen(false)}
+                >
+                  ×
+                </button>
+              </div>
 
-    <p>Select the interventions you want to include in your scenario.</p>
+              <p>Select the interventions you want to include in your scenario.</p>
 
-    <label>
-      <input type="checkbox" />
-      Renewable Energy
-    </label>
+              <label>
+                <input type="checkbox" />
+                Renewable Energy
+              </label>
 
-    <label>
-      <input type="checkbox" />
-      Energy Efficiency
-    </label>
+              <label>
+                <input type="checkbox" />
+                Energy Efficiency
+              </label>
 
-    <label>
-      <input type="checkbox" />
-      Forest Protection
-    </label>
+              <label>
+                <input type="checkbox" />
+                Forest Protection
+              </label>
 
-    <label>
-      <input type="checkbox" />
-      Carbon Reduction
-    </label>
+              <label>
+                <input type="checkbox" />
+                Carbon Reduction
+              </label>
 
-    <label>
-      <input type="checkbox" />
-      Waste Management
-    </label>
+              <label>
+                <input type="checkbox" />
+                Waste Management
+              </label>
 
-    <label>
-      <input type="checkbox" />
-      Water Management
-    </label>
+              <label>
+                <input type="checkbox" />
+                Water Management
+              </label>
 
-    <button type="button" className="run-scenario-button">
-      Run Custom Scenario
-    </button>
-  </div>
-)}
+              <button type="button" className="run-scenario-button">
+                Run Custom Scenario
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -2369,9 +2090,8 @@ function PolicyScenario({ selectedCountry }) {
 
               return (
                 <div
-                  className={`scenario-item ${
-                    isSelected ? "selected" : ""
-                  }`}
+                  className={`scenario-item ${isSelected ? "selected" : ""
+                    }`}
                   key={scenario.name}
                 >
                   {/* Icon */}
@@ -2413,9 +2133,8 @@ function PolicyScenario({ selectedCountry }) {
                   {/* Selection button */}
 
                   <button
-                    className={`scenario-check ${
-                      isSelected ? "checked" : ""
-                    }`}
+                    className={`scenario-check ${isSelected ? "checked" : ""
+                      }`}
                     onClick={() => toggleScenario(scenario.name)}
                     aria-label={`Select ${scenario.name}`}
                   >
@@ -2433,9 +2152,8 @@ function PolicyScenario({ selectedCountry }) {
           {/* RUN BUTTON */}
 
           <button
-            className={`primary-button full ${
-              isRunning ? "running" : ""
-            }`}
+            className={`primary-button full ${isRunning ? "running" : ""
+              }`}
             onClick={runScenario}
             disabled={isRunning || selected.length === 0}
           >
@@ -2584,9 +2302,8 @@ function PolicyScenario({ selectedCountry }) {
           title="Scenario Summary"
           subtitle={
             selected.length
-              ? `${selected.length} intervention${
-                  selected.length > 1 ? "s" : ""
-                } selected`
+              ? `${selected.length} intervention${selected.length > 1 ? "s" : ""
+              } selected`
               : "No interventions selected"
           }
         />
@@ -2693,87 +2410,20 @@ function PriorityOptimizer({ selectedCountry }) {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [apiInterventions, setApiInterventions] = useState(null);
 
-  const interventionPool = [
-    {
-      name: "Renewable Energy Expansion",
-      gain: 6.4,
-      impact: 9.2,
-      confidence: 87,
-      category: "Climate & Energy",
-      description: "Expand solar and wind capacity to improve clean-energy performance.",
-    },
-    {
-      name: "Forest Restoration Mission",
-      gain: 4.8,
-      impact: 8.3,
-      confidence: 85,
-      category: "Biodiversity",
-      description: "Restore degraded forests and improve ecosystem resilience.",
-    },
-    {
-      name: "Clean Air Action Plan",
-      gain: 4.2,
-      impact: 7.9,
-      confidence: 83,
-      category: "Air Quality",
-      description: "Reduce industrial, transport and urban air pollution.",
-    },
-    {
-      name: "Urban Wastewater Modernization",
-      gain: 2.9,
-      impact: 7.5,
-      confidence: 84,
-      category: "Water Quality",
-      description: "Improve wastewater treatment and reduce water pollution.",
-    },
-    {
-      name: "Sustainable Waste Management",
-      gain: 3.1,
-      impact: 6.8,
-      confidence: 80,
-      category: "Waste Management",
-      description: "Improve recycling, waste collection and treatment systems.",
-    },
-    {
-      name: "Electric Public Transport",
-      gain: 3.7,
-      impact: 7.2,
-      confidence: 81,
-      category: "Air Quality",
-      description: "Increase electric buses and low-emission public transportation.",
-    },
-    {
-      name: "Industrial Emission Control",
-      gain: 3.5,
-      impact: 7.6,
-      confidence: 82,
-      category: "Air Quality",
-      description: "Reduce industrial emissions through cleaner production systems.",
-    },
-    {
-      name: "Clean Energy Storage",
-      gain: 3.2,
-      impact: 7.0,
-      confidence: 79,
-      category: "Climate & Energy",
-      description: "Improve renewable-energy reliability through large-scale storage.",
-    },
-  ];
-
   useEffect(() => {
     fetchApi(`/countries/${encodeURIComponent(selectedCountry)}/priorities`)
-      .then(({ priorities }) => setApiInterventions(priorities.map((item) => ({
+      .then(({ priorities }) => setApiInterventions((priorities || []).map((item) => ({
         name: item.intervention,
         gain: item.gain,
         impact: item.impact,
-        confidence: item.confidence * 100,
+        confidence: Math.round(item.confidence * 100),
         category: "Environmental Performance",
-        description: "Backend-ranked sustainability intervention.",
+        description: item.description || "Live prioritized sustainability intervention.",
       }))))
-      .catch(() => setApiInterventions(null));
+      .catch(() => setApiInterventions([]));
   }, [selectedCountry]);
 
-  const activeInterventionPool = apiInterventions || interventionPool;
+  const activeInterventionPool = apiInterventions || [];
 
   /*
    * Different optimization strategies.
@@ -3217,22 +2867,55 @@ function PriorityOptimizer({ selectedCountry }) {
    REPORTS
 ========================================================= */
 
-function Reports() {
+function Reports({ selectedCountry = "India" }) {
   const [selectedFormat, setSelectedFormat] = useState("PDF");
   const [generated, setGenerated] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [reportAssessment, setReportAssessment] = useState(null);
+  const [reportForecast, setReportForecast] = useState(null);
+  const [reportTwins, setReportTwins] = useState([]);
+  const [reportPriorities, setReportPriorities] = useState([]);
 
-  const reportDate = "May 2025";
+  useEffect(() => {
+    fetchApi(`/countries/${encodeURIComponent(selectedCountry)}/assessment`)
+      .then(setReportAssessment)
+      .catch(() => setReportAssessment(null));
+
+    fetchApi(`/countries/${encodeURIComponent(selectedCountry)}/forecast`)
+      .then(setReportForecast)
+      .catch(() => setReportForecast(null));
+
+    fetchApi(`/countries/${encodeURIComponent(selectedCountry)}/twins?limit=5`)
+      .then((data) => setReportTwins(data.twins || []))
+      .catch(() => setReportTwins([]));
+
+    fetchApi(`/countries/${encodeURIComponent(selectedCountry)}/priorities`)
+      .then((data) => setReportPriorities(data.priorities || []))
+      .catch(() => setReportPriorities([]));
+  }, [selectedCountry]);
+
+  const reportDate = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
   const reportData = {
-    country: "India",
-    epiScore: "28.7",
-    globalRank: "176 / 180",
-    predictedScore: "34.6",
-    predictedRank: "162",
-    confidence: "87%",
-    improvement: "+5.9 points",
+    country: selectedCountry,
+    epiScore: String(reportAssessment?.epi_score ?? "--"),
+    globalRank: reportAssessment?.rank ? `${reportAssessment.rank} / ${reportAssessment.total_countries}` : "--",
+    predictedScore: String(reportForecast?.predicted_score ?? "--"),
+    predictedRank: String(reportForecast?.predicted_rank ?? "--"),
+    confidence: `${reportForecast?.confidence ?? 85}%`,
+    improvement: reportForecast?.base_score && reportForecast?.predicted_score
+      ? `+${(Number(reportForecast.predicted_score) - Number(reportForecast.base_score)).toFixed(1)} points`
+      : "+5.0 points",
   };
+
+  const reportIndicators = reportAssessment?.indicators || [];
+  const reportActions = reportPriorities.map((item) => ({
+    name: item.intervention,
+    description: item.description,
+    score: `+${item.gain}`,
+    impact: `+${item.impact}%`,
+    confidence: `${Math.round(item.confidence * 100)}%`,
+  }));
 
   const generatePDF = () => {
     const doc = new jsPDF();
@@ -3246,7 +2929,7 @@ function Reports() {
     doc.text("Environmental Intelligence Report", 20, 40);
 
     doc.setFontSize(14);
-    doc.text("Country: India", 20, 55);
+    doc.text(`Country: ${selectedCountry}`, 20, 55);
     doc.text(`Report Period: ${reportDate}`, 20, 65);
 
     doc.setDrawColor(180, 200, 190);
@@ -3292,7 +2975,7 @@ function Reports() {
 
     doc.setFontSize(11);
 
-    indicatorData.forEach((item, index) => {
+    reportIndicators.forEach((item, index) => {
       const y = 204 + index * 10;
 
       doc.text(
@@ -3307,7 +2990,7 @@ function Reports() {
 
     doc.setFontSize(11);
 
-    scenarioData.forEach((scenario, index) => {
+    reportActions.forEach((scenario, index) => {
       const y = 282 + index * 8;
 
       doc.text(
@@ -3317,7 +3000,7 @@ function Reports() {
       );
     });
 
-    doc.save("EcoLens_AI_Environmental_Report.pdf");
+    doc.save(`EcoLens_AI_${selectedCountry}_Report.pdf`);
   };
 
   const generateExcel = () => {
@@ -3326,13 +3009,13 @@ function Reports() {
     const summaryData = [
       ["EcoLens AI - Environmental Intelligence Report"],
       [],
-      ["Country", "India"],
-      ["Current EPI Score", 28.7],
-      ["Global Rank", "176 / 180"],
-      ["Predicted EPI Score 2030", 34.6],
-      ["Predicted Rank 2030", 162],
-      ["Prediction Confidence", "87%"],
-      ["Expected Improvement", "+5.9 points"],
+      ["Country", selectedCountry],
+      ["Current EPI Score", reportData.epiScore],
+      ["Global Rank", reportData.globalRank],
+      ["Predicted EPI Score 2030", reportData.predictedScore],
+      ["Predicted Rank 2030", reportData.predictedRank],
+      ["Prediction Confidence", reportData.confidence],
+      ["Expected Improvement", reportData.improvement],
     ];
 
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
@@ -3350,7 +3033,7 @@ function Reports() {
 
     const indicatorRows = [
       ["Indicator", "Value", "Unit", "Status"],
-      ...indicatorData.map((item) => [
+      ...reportIndicators.map((item) => [
         item.name,
         item.value,
         item.unit,
@@ -3381,7 +3064,7 @@ function Reports() {
         "Impact",
         "Confidence",
       ],
-      ...scenarioData.map((scenario) => [
+      ...reportActions.map((scenario) => [
         scenario.name,
         scenario.description,
         scenario.score,
@@ -3418,7 +3101,7 @@ function Reports() {
         "Forest Cover",
         "Renewable Energy",
       ],
-      ...twinCountries.map((country) => [
+      ...reportTwins.map((country) => [
         country.country,
         country.similarity,
         country.score,
@@ -3449,7 +3132,7 @@ function Reports() {
 
     XLSX.writeFile(
       workbook,
-      "EcoLens_AI_Environmental_Report.xlsx"
+      `EcoLens_AI_${selectedCountry}_Report.xlsx`
     );
   };
 
@@ -3484,10 +3167,10 @@ function Reports() {
       color: "18352A",
     });
 
-    slide.addText("India", {
+    slide.addText(selectedCountry, {
       x: 0.7,
       y: 2.2,
-      w: 3,
+      w: 6,
       h: 0.5,
       fontSize: 20,
     });
@@ -3560,7 +3243,7 @@ function Reports() {
       bold: true,
     });
 
-    indicatorData.forEach((item, index) => {
+    reportIndicators.forEach((item, index) => {
       slide.addText(
         `${item.name}: ${item.value} ${item.unit} (${item.status})`,
         {
@@ -3646,7 +3329,7 @@ function Reports() {
       color: "18352A",
     });
 
-    scenarioData.forEach((scenario, index) => {
+    reportActions.forEach((scenario, index) => {
       slide.addText(
         `${index + 1}. ${scenario.name}`,
         {
@@ -3685,7 +3368,7 @@ function Reports() {
       color: "18352A",
     });
 
-    twinCountries.forEach((country, index) => {
+    reportTwins.forEach((country, index) => {
       slide.addText(
         `${index + 1}. ${country.country} — Similarity: ${country.similarity}`,
         {
@@ -3699,7 +3382,7 @@ function Reports() {
     });
 
     await pptx.writeFile({
-      fileName: "EcoLens_AI_Environmental_Report.pptx",
+      fileName: `EcoLens_AI_${selectedCountry}_Report.pptx`,
     });
   };
 
@@ -3751,8 +3434,8 @@ function Reports() {
               <div className="cover-content">
                 <span>Environmental</span>
                 <strong>Intelligence Report</strong>
-                <b>India</b>
-                <small>May 2025</small>
+                <b>{selectedCountry}</b>
+                <small>{reportDate}</small>
               </div>
 
               <div className="cover-image">
@@ -3849,8 +3532,8 @@ function Reports() {
             {generating
               ? "Generating..."
               : generated
-              ? `${selectedFormat} Downloaded ✓`
-              : `Download ${selectedFormat} Report`}
+                ? `${selectedFormat} Downloaded ✓`
+                : `Download ${selectedFormat} Report`}
           </button>
         </Card>
       </div>
@@ -3898,67 +3581,76 @@ function Reports() {
    DATA EXPLORER
 ========================================================= */
 
-/* =========================================================
-   DATA EXPLORER
-========================================================= */
-
-function DataExplorer() {
+function DataExplorer({ countries: initialCountries = [] }) {
   const [search, setSearch] = useState("");
+  const [countries, setCountries] = useState(initialCountries);
+  const [loading, setLoading] = useState(!initialCountries.length);
+
+  useEffect(() => {
+    if (!countries.length) {
+      fetchApi("/countries")
+        .then((data) => {
+          setCountries(data.countries || []);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
+    }
+  }, [countries.length]);
 
   const rows = useMemo(() => {
-    return indicatorData.filter((item) =>
-      item.name.toLowerCase().includes(search.toLowerCase())
+    const q = search.toLowerCase().trim();
+    if (!q) return countries;
+    return countries.filter((item) =>
+      item.country.toLowerCase().includes(q) ||
+      (item.flag && item.flag.toLowerCase().includes(q))
     );
-  }, [search]);
-
-  /* ---------------------------------------------------------
-     EXPORT DATA
-  --------------------------------------------------------- */
+  }, [countries, search]);
 
   const exportData = () => {
     const exportRows = [
       [
-        "Indicator",
-        "Value",
-        "Unit",
-        "Status",
-        "Data Coverage",
-        "Trend",
+        "Country",
+        "ISO",
+        "EPI Score",
+        "Air Quality",
+        "Water Quality",
+        "Forest Cover",
+        "Renewable Energy",
+        "Waste Management",
+        "Economic",
+        "Social",
       ],
-
       ...rows.map((item) => [
-        item.name,
-        item.value,
-        item.unit,
-        item.status,
-        "95%",
-        "Declining",
+        item.country,
+        item.flag,
+        item.score,
+        item.air,
+        item.water,
+        item.forest,
+        item.renewable,
+        item.waste,
+        item.economic,
+        item.social,
       ]),
     ];
 
     const worksheet = XLSX.utils.aoa_to_sheet(exportRows);
-
     worksheet["!cols"] = [
-      { wch: 30 },
-      { wch: 15 },
-      { wch: 15 },
+      { wch: 25 },
+      { wch: 10 },
+      { wch: 12 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 16 },
       { wch: 18 },
-      { wch: 18 },
-      { wch: 18 },
+      { wch: 12 },
+      { wch: 12 },
     ];
 
     const workbook = XLSX.utils.book_new();
-
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      "Environmental Data"
-    );
-
-    XLSX.writeFile(
-      workbook,
-      "EcoLens_AI_Environmental_Data.xlsx"
-    );
+    XLSX.utils.book_append_sheet(workbook, worksheet, "EPI Clean Dataset");
+    XLSX.writeFile(workbook, "EcoLens_AI_EPI_Clean_Dataset.xlsx");
   };
 
   return (
@@ -3966,107 +3658,85 @@ function DataExplorer() {
       <PageTitle
         icon={Database}
         title="Data Explorer"
-        subtitle="Explore environmental indicators and model input data"
+        subtitle={`Explore ${countries.length ? `${countries.length} country records` : "all countries"} and indicators from the cleaned EPI dataset`}
       />
 
       <Card>
         <div className="data-toolbar">
-
           <div className="search-box">
             <Search size={16} />
-
             <input
-              placeholder="Search indicators..."
+              placeholder="Search by country or ISO code..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
 
-          {/* EXPORT DATA BUTTON */}
-
-          <button
-            className="outline-button"
-            onClick={exportData}
-          >
+          <button className="outline-button" onClick={exportData}>
             <Download size={15} />
-            Export Data
+            Export Clean Dataset
           </button>
-
         </div>
 
         <div className="data-table-wrapper">
           <table>
-
             <thead>
               <tr>
-                <th>Indicator</th>
-                <th>Value</th>
-                <th>Unit</th>
-                <th>Status</th>
-                <th>Data Coverage</th>
-                <th>Trend</th>
+                <th>Country</th>
+                <th>ISO</th>
+                <th>EPI Score</th>
+                <th>Air Quality</th>
+                <th>Water Quality</th>
+                <th>Forest Cover</th>
+                <th>Renewable Energy</th>
+                <th>Waste Mgmt</th>
+                <th>Performance Tier</th>
               </tr>
             </thead>
 
             <tbody>
-
               {rows.length > 0 ? (
                 rows.map((item) => (
-                  <tr key={item.name}>
-
+                  <tr key={item.country}>
                     <td>
-                      <strong>{item.name}</strong>
+                      <strong>{item.country}</strong>
                     </td>
-
-                    <td>{item.value}</td>
-
-                    <td>{item.unit}</td>
-
+                    <td><code>{item.flag}</code></td>
+                    <td><strong>{item.score}</strong></td>
+                    <td>{item.air}</td>
+                    <td>{item.water}</td>
+                    <td>{item.forest}%</td>
+                    <td>{item.renewable}%</td>
+                    <td>{item.waste}</td>
                     <td>
                       <StatusBadge
                         type={
-                          item.status === "Poor"
-                            ? "poor"
-                            : item.status === "Low"
-                            ? "low"
-                            : "moderate"
+                          item.score >= 60
+                            ? "good"
+                            : item.score >= 35
+                              ? "moderate"
+                              : "poor"
                         }
                       >
-                        {item.status}
+                        {item.score >= 60 ? "Leader" : item.score >= 35 ? "Moderate" : "Priority"}
                       </StatusBadge>
                     </td>
-
-                    <td>
-                      <span className="coverage">
-                        95%
-                      </span>
-                    </td>
-
-                    <td>
-                      <span className="trend-down">
-                        <TrendingDown size={15} />
-                        Declining
-                      </span>
-                    </td>
-
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td
-                    colSpan="6"
+                    colSpan="9"
                     style={{
                       textAlign: "center",
                       padding: "30px",
                     }}
                   >
-                    No indicators found.
+                    {loading ? "Loading EPI dataset..." : "No countries found."}
                   </td>
                 </tr>
               )}
-
             </tbody>
-
           </table>
         </div>
       </Card>
@@ -4095,9 +3765,8 @@ function SettingsPage({ darkMode, setDarkMode }) {
           </div>
 
           <button
-            className={`settings-toggle ${
-              darkMode ? "active" : ""
-            }`}
+            className={`settings-toggle ${darkMode ? "active" : ""
+              }`}
             onClick={() => setDarkMode(!darkMode)}
           >
             <span></span>
@@ -4115,9 +3784,8 @@ function SettingsPage({ darkMode, setDarkMode }) {
           </div>
 
           <button
-            className={`settings-toggle ${
-              notifications ? "active" : ""
-            }`}
+            className={`settings-toggle ${notifications ? "active" : ""
+              }`}
             onClick={() => setNotifications(!notifications)}
           >
             <span></span>
@@ -4155,6 +3823,18 @@ function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState("India");
+  const [countriesList, setCountriesList] = useState([]);
+
+  useEffect(() => {
+    fetchApi("/countries")
+      .then((data) => {
+        if (data && data.countries) {
+          setCountriesList(data.countries);
+        }
+      })
+      .catch(() => { });
+  }, []);
+
   const renderPage = () => {
     switch (activePage) {
       case "dashboard":
@@ -4171,6 +3851,7 @@ function App() {
           <TwinFinder
             selectedCountryName={selectedCountry}
             setSelectedCountryName={setSelectedCountry}
+            allCountries={countriesList}
           />
         );
 
@@ -4181,26 +3862,26 @@ function App() {
         return <PriorityOptimizer selectedCountry={selectedCountry} />;
 
       case "reports":
-        return <Reports />;
+        return <Reports selectedCountry={selectedCountry} />;
 
       case "data":
-        return <DataExplorer />;
+        return <DataExplorer countries={countriesList} />;
 
-   case "settings":
-  return (
-    <SettingsPage
-      darkMode={darkMode}
-      setDarkMode={setDarkMode}
-    />
-  );
+      case "settings":
+        return (
+          <SettingsPage
+            darkMode={darkMode}
+            setDarkMode={setDarkMode}
+          />
+        );
 
       default:
-        return <Dashboard />;
+        return <Dashboard selectedCountry={selectedCountry} />;
     }
   };
 
- return (
-  <div className={`app-shell ${darkMode ? "dark-mode" : "light-mode"}`}>
+  return (
+    <div className={`app-shell ${darkMode ? "dark-mode" : "light-mode"}`}>
       <Sidebar
         activePage={activePage}
         setActivePage={setActivePage}
@@ -4214,6 +3895,7 @@ function App() {
           title={activePage}
           selectedCountry={selectedCountry}
           setSelectedCountry={setSelectedCountry}
+          countries={countriesList}
         />
 
         <div className="content-wrapper">{renderPage()}</div>

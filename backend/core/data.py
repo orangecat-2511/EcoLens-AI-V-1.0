@@ -48,6 +48,12 @@ COUNTRY_RANKS = {
     )
 }
 
+GLOBAL_AVG_SCORE = round(sum(country["score"] for country in COUNTRIES) / len(COUNTRIES), 2)
+GLOBAL_INDICATOR_AVGS = {
+    key: round(sum(country[key] for country in COUNTRIES) / len(COUNTRIES), 2)
+    for key in ["air", "water", "forest", "renewable", "waste", "economic", "demographic", "governance", "social", "environmental"]
+}
+
 # The repository dataset is a current snapshot. Historical observations should
 # be loaded here when a year-indexed source is added.
 HISTORY: List[Dict] = []
